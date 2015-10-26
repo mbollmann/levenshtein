@@ -3,7 +3,6 @@
 
 import sys
 import argparse
-from Levenshtein import LevenshteinAligner
 from PMILevenshtein import PMILevenshtein
 
 BEGIN_TOKEN = "__BEGIN__"
@@ -69,15 +68,12 @@ def main(args):
         pmi.add_pair(source, target)
     pmi.train()
 
-    # Align and output
-    aligner = LevenshteinAligner(weights=pmi.weights)
-    aligner.epsilon = eps
-    for (source, target) in data:
-        (_, alignments) = aligner.perform_levenshtein(source, target)
-        # output character-level normalization from first alignment:
+    # Output alignments
+    for source_target_pair in data:
+        alignments = pmi.alignments[source_target_pair]
         for tokens in process_alignment(alignments[0], eps):
             print('\t'.join(tokens).encode("utf-8"))
-        print("")
+        print("")  # empty line between words
 
 if __name__ == '__main__':
     description = ("Converts word-level normalizations to character-level "
