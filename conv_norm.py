@@ -52,28 +52,33 @@ def revert_conversion(data, epsilon):
     if input_token:
         yield (input_token, output_token)
 
-def main(args):
+def train_and_align(data, eps, log_to):
+    # Train PMI
+    pmi = PMILevenshtein()
+    for (source, target) in data:
+        pmi.add_pair(source, target)
+    pmi.train(log_to=log_to)
+
+    # Output alignments
+    for source_target_pair in data:
+        alignments = pmi.alignments[source_target_pair]
+        yield(list(process_alignment(alignments[0], eps)))
+
+def main(args, output_to=sys.stdout, log_to=sys.stderr):
     data = process_input(args.infile, args.encoding)
     eps = args.epsilon
 
     # Revert the conversion?
     if args.revert:
         for tokens in revert_conversion(data, eps):
-            print('\t'.join(tokens).encode("utf-8"))
-        exit(0)
-
-    # Train PMI
-    pmi = PMILevenshtein()
-    for (source, target) in data:
-        pmi.add_pair(source, target)
-    pmi.train()
-
-    # Output alignments
-    for source_target_pair in data:
-        alignments = pmi.alignments[source_target_pair]
-        for tokens in process_alignment(alignments[0], eps):
-            print('\t'.join(tokens).encode("utf-8"))
-        print("")  # empty line between words
+            output_to.write('\t'.join(tokens).encode("utf-8"))
+            output_to.write('\n')
+    else:
+        for word_pair in train_and_align(data, eps, log_to):
+            for char_alignment in word_pair:
+                output_to.write('\t'.join(char_alignment).encode("utf-8"))
+                output_to.write('\n')
+            output_to.write('\n')  # empty line between words
 
 if __name__ == '__main__':
     description = ("Converts word-level normalizations to character-level "
