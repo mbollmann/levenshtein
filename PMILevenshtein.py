@@ -192,26 +192,15 @@ class PMILevenshtein(object):
 #            return False
 #        return True
 
-    def convergence_reached(self, delta):
-        mean_diff = sum(delta) * 1.0 / len(delta)
-        if mean_diff <= self.convergence_quota:
-            return True
-        else:
-            return False
-
     def train(self, log_to=sys.stderr):
         def log(msg):
             if log_to:
-                print >> log_to, msg
+                log_to.write(msg)
 
-        log("Calculating first alignments...")
-        # calculate first alignments
-        alignments = self.perform_alignments()
-
-        i = 0
-        while True:
-            i += 1
-            log("Performing cycle %i..." % i)
+        for i in range(1, 20):
+            # calculate new alignments
+            log("[PMI] Performing cycle %2i..." % i)
+            alignments = self.perform_alignments()
             # derive rule frequency statistics
             rules = self.collect_rules_by_freq(alignments)
             # calculate rule and character probabilities
@@ -220,15 +209,19 @@ class PMILevenshtein(object):
             distances = self.calculate_distances(rules, pr, ps, pt)
             # adjust edit distance weights
             delta = self.adjust_weights(distances)
+            avg_delta = sum(delta) * 1.0 / len(delta)
+            log(" avg delta: %.4f\n" % avg_delta)
             # if edit distance weights have not changed significantly,
             # convergence is reached
-            if self.convergence_reached(delta):
+            if avg_delta <= self.convergence_quota:
+                log("[PMI] Convergence reached.  Stopping.\n")
                 break
-            # calculate new alignments
-            alignments = self.perform_alignments()
+        else:
+            log("[PMI] Maximum number of iterations reached.  Stopping.\n")
 
+        log("[PMI] Generating final alignments...")
         self.alignments = self.perform_alignments()
-        log("Convergence reached.")
+        log(" done.\n")
 
 if __name__ == '__main__':
     print("This file contains class definitions and cannot be run as a stand-alone script.")
