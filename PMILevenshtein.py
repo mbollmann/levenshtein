@@ -199,15 +199,19 @@ class PMILevenshtein(object):
         else:
             return False
 
-    def train(self):
-        print >> sys.stderr, "Calculating first alignments..."
+    def train(self, log_to=sys.stderr):
+        def log(msg):
+            if log_to:
+                print >> log_to, msg
+
+        log("Calculating first alignments...")
         # calculate first alignments
         alignments = self.perform_alignments()
 
         i = 0
         while True:
             i += 1
-            print >> sys.stderr, "Performing cycle %i..." % i
+            log("Performing cycle %i..." % i)
             # derive rule frequency statistics
             rules = self.collect_rules_by_freq(alignments)
             # calculate rule and character probabilities
@@ -224,10 +228,7 @@ class PMILevenshtein(object):
             alignments = self.perform_alignments()
 
         self.alignments = self.perform_alignments()
-
-        print >> sys.stderr, "Convergence reached."
-
-
+        log("Convergence reached.")
 
 if __name__ == '__main__':
     print("This file contains class definitions and cannot be run as a stand-alone script.")
