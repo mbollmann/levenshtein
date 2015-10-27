@@ -21,8 +21,9 @@ class LevenshteinAligner(object):
     weights = None
     epsilon = '<eps>'
 
-    def __init__(self, weights=None):
+    def __init__(self, weights=None, epsilon='<eps>'):
         self.weights = weights
+        self.epsilon = epsilon
 
     def perform_levenshtein(self, source, target):
         n, m = len(source), len(target)

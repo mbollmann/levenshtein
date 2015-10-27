@@ -55,6 +55,7 @@ def revert_conversion(data, epsilon):
 def train_and_align(data, eps, log_to):
     # Train PMI
     pmi = PMILevenshtein()
+    pmi.epsilon = eps
     for (source, target) in data:
         pmi.add_pair(source, target)
     pmi.train(log_to=log_to)

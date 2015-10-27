@@ -35,6 +35,7 @@ class PMILevenshtein(object):
     pairs   = {}
     alignments = {}
     ngrams  = 1
+    epsilon = "<eps>"
 
     convergence_quota = 0.01
     min_freq_divisor = 6.293
@@ -58,7 +59,7 @@ class PMILevenshtein(object):
 
     def perform_alignments(self):
         alignments = {}
-        leven = LevenshteinAligner(weights=self.weights)
+        leven = LevenshteinAligner(weights=self.weights, epsilon=self.epsilon)
         for pair in self.pairs:
             alignments[pair] = leven.align(*pair)
         return alignments
@@ -82,10 +83,10 @@ class PMILevenshtein(object):
                     source = ''.join(map(itemgetter(0), ngram_rule))
                     target = ''.join(map(itemgetter(1), ngram_rule))
                     # hacky as can be
-                    if source != '<eps>':
-                        source = source.replace('<eps>','')
-                    if target != '<eps>':
-                        target = target.replace('<eps>','')
+                    if source != self.epsilon:
+                        source = source.replace(self.epsilon,'')
+                    if target != self.epsilon:
+                        target = target.replace(self.epsilon,'')
                     lhs[source] += value
                     ngrams[source][target] += value
         weights = {}
@@ -113,10 +114,10 @@ class PMILevenshtein(object):
                     source = ''.join(map(itemgetter(0), rule))
                     target = ''.join(map(itemgetter(1), rule))
                     # hacky as can be
-                    if source != '<eps>':
-                        source = source.replace('<eps>','')
-                    if target != '<eps>':
-                        target = target.replace('<eps>','')
+                    if source != self.epsilon:
+                        source = source.replace(self.epsilon,'')
+                    if target != self.epsilon:
+                        target = target.replace(self.epsilon,'')
                     rules_by_freq[(source, target)] += value
         return rules_by_freq
 
