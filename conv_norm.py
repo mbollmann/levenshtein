@@ -6,6 +6,7 @@ import argparse
 from PMILevenshtein import PMILevenshtein
 
 BEGIN_TOKEN = "__BEGIN__"
+Begin_TOKEN = "__begin__"
 
 def process_input(data, enc):
     processed = []
@@ -40,7 +41,7 @@ def process_alignment(alignment, epsilon):
 def revert_conversion(data, epsilon):
     input_token, output_token = None, None
     for (lhs, rhs) in data:
-        if lhs == BEGIN_TOKEN:
+        if lhs.lower() == Begin_TOKEN:
             if input_token:
                 yield (input_token, output_token)
             input_token = ""
