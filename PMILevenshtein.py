@@ -153,7 +153,10 @@ class PMILevenshtein(object):
 
             dist = {}
             for rule in rules:
-                dist[rule] = (max_pmi - pmi[rule]) / max_dist
+                if max_dist == 0:  # edge case -- shouldn't happen on real data
+                    dist[rule] = sys.maxint
+                else:
+                    dist[rule] = (max_pmi - pmi[rule]) / max_dist
         elif method=='mine':
             dist = {}
             for rule in rules:
