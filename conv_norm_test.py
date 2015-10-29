@@ -2,64 +2,135 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from hypothesis import given, Settings
-import hypothesis.strategies as st
 
-from StringIO import StringIO
-import unicodedata
-import sys
 import conv_norm
 
-def valid_category(cat):
-    return (not cat.startswith("C") and not cat.startswith("Z"))
+KEEP_LABEL = conv_norm.KEEP_LABEL
+EPS_LABEL = "<<!EPS!>>"
 
-ALPHABET = [c for c in map(unichr, range(0x110000)) \
-            if valid_category(unicodedata.category(c))]
-TOKEN = st.text(alphabet=ALPHABET, min_size=1, max_size=15, average_size=6)
-DOCUMENT = st.lists(elements=st.tuples(TOKEN, TOKEN), min_size=1, max_size=100)
+class TestProcessAlignment(unittest.TestCase):
+    def test_identity(self):
+        a = [('f', 'f'), ('o', 'o'), ('o', 'o')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL))
+        expected = [('__BEGIN__', EPS_LABEL)] + a
+        self.assertEqual(actual, expected)
 
-def convert_to_stringio(data):
-    sio = StringIO()
-    for (source, target) in data:
-        sio.write(source.strip().encode("utf-8"))
-        sio.write('\t')
-        sio.write(target.strip().encode("utf-8"))
-        sio.write('\n')
-    sio.seek(0)
-    return sio
+    def test_identity_with_keep(self):
+        a = [('f', 'f'), ('o', 'o'), ('o', 'o')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL, keep=True))
+        expected = [('__BEGIN__', EPS_LABEL), ('f', KEEP_LABEL), ('o', KEEP_LABEL), ('o', KEEP_LABEL)]
+        self.assertEqual(actual, expected)
 
-class MockArgs(object):
-    infile = None
-    revert = False
-    epsilon = "<eps>"
-    encoding = "utf-8"
+    def test_deletion(self):
+        a = [('f', 'f'), ('o', EPS_LABEL), ('o', 'o')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL))
+        expected = [('__BEGIN__', EPS_LABEL)] + a
+        self.assertEqual(actual, expected)
 
-    def __init__(self, infile=None):
-        self.infile = infile
+    def test_deletion_with_keep(self):
+        a = [('f', 'f'), ('o', EPS_LABEL), ('o', 'o')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL, keep=True))
+        expected = [('__BEGIN__', EPS_LABEL), ('f', KEEP_LABEL), ('o', EPS_LABEL), ('o', KEEP_LABEL)]
+        self.assertEqual(actual, expected)
 
-class TestReversion(unittest.TestCase):
-    @given(tokens=DOCUMENT, settings=Settings(max_examples=50))
-    def test_reverting_conversion(self, tokens):
-        sys.stderr.write("#")
-        sio = convert_to_stringio(tokens)
-        # convert
-        args = MockArgs(infile=sio)
-        converted = StringIO()
-        conv_norm.main(args, output_to=converted, log_to=None)
-        # revert
-        converted.seek(0)
-        reverted = StringIO()
-        args.infile = converted
-        args.revert = True
-        conv_norm.main(args, output_to=reverted, log_to=None)
-        # check
-        sio.seek(0)
-        reverted.seek(0)
-        original = sio.readlines()
-        generated = reverted.readlines()
-        self.assertTrue(len(original) > 0)
-        self.assertTrue(len(generated) > 0)
-        self.assertEqual(original, generated)
+    def test_insertion(self):
+        a = [('f', 'f'), (EPS_LABEL, 'o'), ('o', 'o')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL))
+        expected = [('__BEGIN__', EPS_LABEL), ('f', 'fo'), ('o', 'o')]
+        self.assertEqual(actual, expected)
+
+    def test_insertion_with_keep(self):
+        a = [('f', 'f'), (EPS_LABEL, 'o'), ('o', 'o')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL, keep=True))
+        expected = [('__BEGIN__', EPS_LABEL), ('f', 'fo'), ('o', KEEP_LABEL)]
+        self.assertEqual(actual, expected)
+
+    def test_insertion_at_beginning(self):
+        a = [(EPS_LABEL, 'f'), ('o', 'o'), ('o', 'o')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL))
+        expected = [('__BEGIN__', 'f'), ('o', 'o'), ('o', 'o')]
+        self.assertEqual(actual, expected)
+
+    def test_insertion_at_beginning_with_keep(self):
+        a = [(EPS_LABEL, 'f'), ('o', 'o'), ('o', 'o')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL, keep=True))
+        expected = [('__BEGIN__', 'f'), ('o', KEEP_LABEL), ('o', KEEP_LABEL)]
+        self.assertEqual(actual, expected)
+
+    def test_mixed_insertion_and_deletion(self):
+        a = [('f', 'o'), ('o', EPS_LABEL), (EPS_LABEL, 'x'), ('y', 'n')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL))
+        expected = [('__BEGIN__', EPS_LABEL), ('f', 'o'), ('o', 'x'), ('y', 'n')]
+        self.assertEqual(actual, expected)
+
+    def test_mixed_insertion_and_deletion_with_keep(self):
+        a = [('f', 'o'), ('o', EPS_LABEL), (EPS_LABEL, 'x'), ('y', 'n')]
+        actual = list(conv_norm.process_alignment(a, EPS_LABEL, keep=True))
+        expected = [('__BEGIN__', EPS_LABEL), ('f', 'o'), ('o', 'x'), ('y', 'n')]
+        self.assertEqual(actual, expected)
+
+
+class TestRevertConversion(unittest.TestCase):
+    def test_identity(self):
+        a = [('__BEGIN__', EPS_LABEL), ('f', 'f'), ('o', 'o'), ('o', 'o')]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('foo', 'foo')]
+        self.assertEqual(actual, expected)
+
+    def test_identity_with_keep(self):
+        a = [('__BEGIN__', EPS_LABEL), ('f', KEEP_LABEL), ('o', KEEP_LABEL), ('o', KEEP_LABEL)]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('foo', 'foo')]
+        self.assertEqual(actual, expected)
+
+    def test_deletion(self):
+        a = [('__BEGIN__', EPS_LABEL), ('f', 'f'), ('o', EPS_LABEL), ('o', 'o')]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('foo', 'fo')]
+        self.assertEqual(actual, expected)
+
+    def test_deletion_with_keep(self):
+        a = [('__BEGIN__', EPS_LABEL), ('f', KEEP_LABEL), ('o', EPS_LABEL), ('o', KEEP_LABEL)]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('foo', 'fo')]
+        self.assertEqual(actual, expected)
+
+    def test_insertion(self):
+        a = [('__BEGIN__', EPS_LABEL), ('f', 'fo'), ('o', 'o')]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('fo', 'foo')]
+        self.assertEqual(actual, expected)
+
+    def test_insertion_with_keep(self):
+        a = [('__BEGIN__', EPS_LABEL), ('f', 'fo'), ('o', KEEP_LABEL)]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('fo', 'foo')]
+        self.assertEqual(actual, expected)
+
+    def test_insertion_at_beginning(self):
+        a = [('__BEGIN__', 'f'), ('o', 'o'), ('o', 'o')]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('oo', 'foo')]
+        self.assertEqual(actual, expected)
+
+    def test_insertion_at_beginning_with_keep(self):
+        a = [('__BEGIN__', 'f'), ('o', KEEP_LABEL), ('o', KEEP_LABEL)]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('oo', 'foo')]
+        self.assertEqual(actual, expected)
+
+    def test_mixed_insertion_and_deletion(self):
+        a = [('__BEGIN__', EPS_LABEL), ('f', 'o'), ('o', 'x'), ('y', 'n')]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('foy', 'oxn')]
+        self.assertEqual(actual, expected)
+
+    def test_mixed_insertion_and_deletion_with_keep(self):
+        a = [('__BEGIN__', EPS_LABEL), ('f', 'o'), ('o', 'x'), ('y', 'n')]
+        actual = list(conv_norm.revert_conversion(a, EPS_LABEL))
+        expected = [('foy', 'oxn')]
+        self.assertEqual(actual, expected)
+
 
 if __name__ == '__main__':
     unittest.main()
