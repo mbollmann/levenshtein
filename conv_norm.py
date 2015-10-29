@@ -7,6 +7,8 @@ from PMILevenshtein import PMILevenshtein
 
 BEGIN_TOKEN = "__BEGIN__"
 Begin_TOKEN = "__begin__"
+KEEP_LABEL = "__KEEP__"
+EPSILON_LABEL = "__EPS__"
 
 def process_input(data, enc):
     processed = []
@@ -23,7 +25,10 @@ def process_input(data, enc):
         processed.append((source, target))
     return processed
 
-def process_alignment(alignment, epsilon):
+def process_alignment(alignment, epsilon, keep=False):
+    def make(i, o):
+        return (i, o if not keep or i != o else KEEP_LABEL)
+
     input_token = BEGIN_TOKEN
     output_token = epsilon
     for (lhs, rhs) in alignment:
@@ -33,27 +38,34 @@ def process_alignment(alignment, epsilon):
             else:
                 output_token += rhs
         else:
-            yield (input_token, output_token)
+            yield make(input_token, output_token)
             input_token = lhs
             output_token = rhs
-    yield (input_token, output_token)
+    yield make(input_token, output_token)
 
 def revert_conversion(data, epsilon):
+    def make_output(l, r):
+        if r == epsilon:
+            return ""
+        elif r == KEEP_LABEL:
+            return l
+        else:
+            return r
+
     input_token, output_token = None, None
     for (lhs, rhs) in data:
         if lhs.lower() == Begin_TOKEN:
             if input_token:
                 yield (input_token, output_token)
             input_token = ""
-            output_token = rhs if rhs != epsilon else ""
+            output_token = make_output(lhs, rhs)
         else:
             input_token += lhs
-            if rhs != epsilon:
-                output_token += rhs
+            output_token += make_output(lhs, rhs)
     if input_token:
         yield (input_token, output_token)
 
-def train_and_align(data, eps, log_to):
+def train_and_align(data, eps, log_to, use_keep):
     # Train PMI
     pmi = PMILevenshtein()
     pmi.epsilon = eps
@@ -64,7 +76,7 @@ def train_and_align(data, eps, log_to):
     # Output alignments
     for source_target_pair in data:
         alignments = pmi.alignments[source_target_pair]
-        yield(list(process_alignment(alignments[0], eps)))
+        yield(list(process_alignment(alignments[0], eps, keep=use_keep)))
 
 def main(args, output_to=sys.stdout, log_to=sys.stderr):
     data = process_input(args.infile, args.encoding)
@@ -76,7 +88,7 @@ def main(args, output_to=sys.stdout, log_to=sys.stderr):
             output_to.write('\t'.join(tokens).encode("utf-8"))
             output_to.write('\n')
     else:
-        for word_pair in train_and_align(data, eps, log_to):
+        for word_pair in train_and_align(data, eps, log_to, args.use_keep):
             for char_alignment in word_pair:
                 output_to.write('\t'.join(char_alignment).encode("utf-8"))
                 output_to.write('\n')
@@ -103,9 +115,14 @@ if __name__ == '__main__':
                         default=False,
                         help=('Reverts the conversion, i.e., converts character-level '
                               'representations back to word-level'))
+    parser.add_argument('--use-keep',
+                        action='store_true',
+                        default=False,
+                        help=('Labels identity substitutions with a special ' +
+                              KEEP_LABEL + ' symbol'))
     parser.add_argument('--epsilon',
                         type=str,
-                        default="<eps>",
+                        default=EPSILON_LABEL,
                         help='Epsilon symbol to use (default: "%(default)s")')
     parser.add_argument('-e', '--encoding',
                         default='utf-8',
