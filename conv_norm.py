@@ -25,7 +25,12 @@ def process_input(data, enc):
         processed.append((source, target))
     return processed
 
-def process_alignment(alignment, epsilon, keep=False):
+def process_alignment(alignment, epsilon, keep=False, interspersed=False):
+    if interspersed:
+        for r in process_alignment_interspersed(alignment, epsilon):
+            yield r
+        return
+
     def make(i, o):
         return (i, o if not keep or i != o else KEEP_LABEL)
 
@@ -42,6 +47,21 @@ def process_alignment(alignment, epsilon, keep=False):
             input_token = lhs
             output_token = rhs
     yield make(input_token, output_token)
+
+def process_alignment_interspersed(alignment, epsilon):
+    input_token = BEGIN_TOKEN
+    output_token = epsilon
+    for (lhs, rhs) in alignment:
+        if lhs == epsilon:
+            if output_token == epsilon:
+                output_token = rhs
+            else:
+                output_token += rhs
+        else:
+            yield (input_token, output_token)
+            yield (lhs, rhs)
+            input_token, output_token = epsilon, epsilon
+    yield (input_token, output_token)
 
 def revert_conversion(data, epsilon):
     def make_output(l, r):
@@ -60,12 +80,15 @@ def revert_conversion(data, epsilon):
             input_token = ""
             output_token = make_output(lhs, rhs)
         else:
-            input_token += lhs
+            if lhs != epsilon:
+                input_token += lhs
             output_token += make_output(lhs, rhs)
     if input_token:
         yield (input_token, output_token)
 
-def train_and_align(data, eps, log_to, use_keep):
+def train_and_align(data, eps, log_to, args):
+    use_keep, interspersed = args.use_keep, args.interspersed
+
     # Train PMI
     pmi = PMILevenshtein()
     pmi.epsilon = eps
@@ -76,7 +99,9 @@ def train_and_align(data, eps, log_to, use_keep):
     # Output alignments
     for source_target_pair in data:
         alignments = pmi.alignments[source_target_pair]
-        yield(list(process_alignment(alignments[0], eps, keep=use_keep)))
+        yield(list(process_alignment(alignments[0], eps,
+                                     keep=use_keep,
+                                     interspersed=interspersed)))
 
 def main(args, output_to=sys.stdout, log_to=sys.stderr):
     data = process_input(args.infile, args.encoding)
@@ -88,7 +113,7 @@ def main(args, output_to=sys.stdout, log_to=sys.stderr):
             output_to.write('\t'.join(tokens).encode("utf-8"))
             output_to.write('\n')
     else:
-        for word_pair in train_and_align(data, eps, log_to, args.use_keep):
+        for word_pair in train_and_align(data, eps, log_to, args):
             for char_alignment in word_pair:
                 output_to.write('\t'.join(char_alignment).encode("utf-8"))
                 output_to.write('\n')
@@ -115,6 +140,10 @@ if __name__ == '__main__':
                         default=False,
                         help=('Reverts the conversion, i.e., converts character-level '
                               'representations back to word-level'))
+    parser.add_argument('--interspersed',
+                        action='store_true',
+                        default=False,
+                        help=('Intersperse the input word with epsilon characters'))
     parser.add_argument('--use-keep',
                         action='store_true',
                         default=False,

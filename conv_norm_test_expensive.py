@@ -34,6 +34,7 @@ class MockArgs(object):
     epsilon = "<eps>"
     encoding = "utf-8"
     use_keep = False
+    interspersed = False
 
     def __init__(self, infile=None):
         self.infile = infile
