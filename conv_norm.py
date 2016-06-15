@@ -92,9 +92,12 @@ def train_and_align(data, eps, log_to, args):
     # Train PMI
     pmi = PMILevenshtein()
     pmi.epsilon = eps
-    for (source, target) in data:
-        pmi.add_pair(source, target)
-    pmi.train(log_to=log_to)
+    if args.param:
+        pmi.weights.loadParamFromXMLFile(args.param)
+    else:
+        for (source, target) in data:
+            pmi.add_pair(source, target)
+        pmi.train(log_to=log_to)
 
     # Output alignments
     for source_target_pair in data:
@@ -135,6 +138,10 @@ if __name__ == '__main__':
                         type=argparse.FileType('r'),
                         default=sys.stdin,
                         help='Word-level normalizations, tab-separated (default: <STDIN>)')
+    parser.add_argument('-f', '--file',
+                        dest="param",
+                        type=str,
+                        help='XML file with Levenshtein weights')
     parser.add_argument('-r', '--revert',
                         action='store_true',
                         default=False,
