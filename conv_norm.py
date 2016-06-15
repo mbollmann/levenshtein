@@ -92,16 +92,18 @@ def train_and_align(data, eps, log_to, args):
     # Train PMI
     pmi = PMILevenshtein()
     pmi.epsilon = eps
+    for (source, target) in data:
+        pmi.add_pair(source, target)
     if args.param:
         pmi.weights.loadParamFromXMLFile(args.param)
+        pmi_align = pmi.perform_alignments()
     else:
-        for (source, target) in data:
-            pmi.add_pair(source, target)
         pmi.train(log_to=log_to)
+        pmi_align = pmi.alignments
 
     # Output alignments
     for source_target_pair in data:
-        alignments = pmi.alignments[source_target_pair]
+        alignments = pmi_align[source_target_pair]
         yield(list(process_alignment(alignments[0], eps,
                                      keep=use_keep,
                                      interspersed=interspersed)))
