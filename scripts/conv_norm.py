@@ -3,7 +3,7 @@
 
 import sys
 import argparse
-from PMILevenshtein import PMILevenshtein
+from mblevenshtein import PMILevenshtein
 
 BEGIN_TOKEN = "__BEGIN__"
 Begin_TOKEN = "__begin__"

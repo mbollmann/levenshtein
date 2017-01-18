@@ -35,6 +35,7 @@ class MockArgs(object):
     encoding = "utf-8"
     use_keep = False
     interspersed = False
+    param = None
 
     def __init__(self, infile=None):
         self.infile = infile

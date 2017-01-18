@@ -3,7 +3,7 @@
 
 import os, sys
 import argparse
-from PMILevenshtein import PMILevenshtein
+from mblevenshtein import PMILevenshtein
 from operator import itemgetter
 
 class MainApplication(object):
@@ -48,7 +48,7 @@ class MainApplication(object):
         for (rule, dist) in sorted(self.pmi.weights.weights.items(), key=itemgetter(1)):
             if rule[0] != rule[1] :
                 utfprint("%s\t%s\t%f" % (rule[0], rule[1], dist))
-            
+
 
 if __name__ == '__main__':
     description = "Calculates Levenshtein weights based on training pairs of source--target wordforms."

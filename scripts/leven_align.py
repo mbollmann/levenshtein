@@ -3,8 +3,7 @@
 
 import sys
 import argparse
-from WeightedLevenshtein import LevenshteinWeights
-from Levenshtein import LevenshteinAligner
+from mblevenshtein import LevenshteinAligner, LevenshteinWeights
 
 class MainApplication(object):
     args = None
