@@ -5,6 +5,7 @@ import os, sys, math
 from normalizer_exceptions import InitError
 from itertools import product
 from operator import itemgetter
+from WeightedLevenshtein import LevenshteinWeights
 
 class Levenshtein(object):
     # standard Levenshtein has no weights
@@ -22,7 +23,10 @@ class LevenshteinAligner(object):
     epsilon = '<eps>'
 
     def __init__(self, weights=None, epsilon='<eps>'):
-        self.weights = weights
+        if weights is None:
+            self.weights = LevenshteinWeights()
+        else:
+            self.weights = weights
         self.epsilon = epsilon
 
     def perform_levenshtein(self, source, target):
@@ -67,7 +71,7 @@ class LevenshteinAligner(object):
             if sub_cost <= best_cost:
                 for ruleset in e[i][j]:
                     e[i+1][j+1].append(ruleset.copy_append(sub_op))
-            
+
         # return minimal cost and best alignment(s)
         return (d[n][m], e[n][m])
 
