@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, math
-from normalizer_exceptions import InitError
 from itertools import product
 from operator import itemgetter
-from WeightedLevenshtein import LevenshteinWeights
+from .normalizer_exceptions import InitError
+from .WeightedLevenshtein import LevenshteinWeights
 
 class Levenshtein(object):
     # standard Levenshtein has no weights

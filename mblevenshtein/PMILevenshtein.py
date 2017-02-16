@@ -5,9 +5,10 @@ import os, sys, math
 import argparse
 from collections import defaultdict
 from operator import itemgetter
-from itertools import tee, izip
-from WeightedLevenshtein import LevenshteinWeights
-from Levenshtein import LevenshteinAligner
+from itertools import tee
+from six.moves import zip as izip
+from .WeightedLevenshtein import LevenshteinWeights
+from .Levenshtein import LevenshteinAligner
 
 def groupwise(iterable, n=2):
     tees = tee(iterable, n)
