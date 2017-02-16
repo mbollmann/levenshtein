@@ -79,7 +79,7 @@ class LevenshteinAligner(object):
         (d, e) = self.perform_levenshtein(source, target)
 
         def utfprint(string):
-            print string.encode("utf-8")
+            print(string.encode("utf-8"))
 
         if style=='verbose':
             utfprint("Pair:  %s -- %s  / Distance: %f" % (source, target, d))
