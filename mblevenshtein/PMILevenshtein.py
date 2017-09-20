@@ -38,7 +38,7 @@ class PMILevenshtein(object):
     ngrams  = 1
     epsilon = "<eps>"
 
-    convergence_quota = 0.01
+    convergence_quota = 0.001
     min_freq_divisor = 6.293
 
     # how fast weights are adjusted
@@ -202,6 +202,7 @@ class PMILevenshtein(object):
             if log_to:
                 log_to.write(msg)
 
+        avg_delta = sys.maxint
         for i in range(1, 20):
             # calculate new alignments
             log("[PMI] Performing cycle %2i..." % i)
@@ -214,11 +215,12 @@ class PMILevenshtein(object):
             distances = self.calculate_distances(rules, pr, ps, pt)
             # adjust edit distance weights
             delta = self.adjust_weights(distances)
+            prv_delta = avg_delta
             avg_delta = sum(delta) * 1.0 / len(delta)
             log(" avg delta: %.4f\n" % avg_delta)
             # if edit distance weights have not changed significantly,
             # convergence is reached
-            if avg_delta <= self.convergence_quota:
+            if abs(avg_delta - prv_delta) <= self.convergence_quota:
                 log("[PMI] Convergence reached.  Stopping.\n")
                 break
         else:

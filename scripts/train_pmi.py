@@ -14,6 +14,7 @@ class MainApplication(object):
     def __init__(self, args):
         self.args = args
         self.pmi = PMILevenshtein()
+        self.pmi.learning_rate = args.lr
         self.divisor = args.divisor
 
     def read_input_data(self):
@@ -31,13 +32,14 @@ class MainApplication(object):
         self.read_input_data()
         self.pmi.train()
 
-        self.pmi.weights.reset_weights()
-        minval = 0.1
-        for (rule, weight) in self.pmi.find_ngram_weights(n=self.args.ngram).iteritems():
-            (source, target) = rule
-            if source == '<eps>': continue
-            if weight > (len(source) * self.divisor): continue
-            self.pmi.weights.set_weight(source, target, max((weight * 1.0 / self.divisor), minval))
+        if args.generate == "weights":
+            self.pmi.weights.reset_weights()
+            minval = 0.1
+            for (rule, weight) in self.pmi.find_ngram_weights(n=self.args.ngram).iteritems():
+                (source, target) = rule
+                if source == '<eps>': continue
+                if weight > (len(source) * self.divisor): continue
+                self.pmi.weights.set_weight(source, target, max((weight * 1.0 / self.divisor), minval))
 
         if self.args.savefile:
             self.args.savefile.write(self.pmi.weights.make_xml_param())
@@ -66,6 +68,20 @@ if __name__ == '__main__':
                         dest="savefile",
                         type=argparse.FileType('w'),
                         help='Save parameter file as XML')
+    parser.add_argument('-g', '--generate',
+                        choices=('pmi', 'weights'),
+                        default='weights',
+                        help=('Choose whether to output weights for '
+                              'Levenshtein normalization (after Adesam '
+                              'et al., 2012) or only the weights '
+                              'generated during the PMI alignment; '
+                              'if the latter, options -n/-d have no '
+                              'effect (default: %(default)s)'))
+    parser.add_argument('-l', '--lr',
+                        metavar="LR",
+                        type=float,
+                        default=0.2,
+                        help='Learning rate for weight adjustments (default: %(default)f)')
     parser.add_argument('-n', '--ngram',
                         metavar="N",
                         type=int,

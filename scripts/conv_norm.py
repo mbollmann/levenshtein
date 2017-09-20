@@ -92,6 +92,7 @@ def train_and_align(data, eps, log_to, args):
     # Train PMI
     pmi = PMILevenshtein()
     pmi.epsilon = eps
+    pmi.learning_rate = 1.0
     for (source, target) in data:
         pmi.add_pair(source, target)
     if args.param:
@@ -129,7 +130,7 @@ if __name__ == '__main__':
                    "normalizations (or vice versa), using PMI Levenshtein "
                    "alignment.")
     epilog = ("Calling this script on a given INFILE is equivalent to "
-              "calling train_pmi.py on INFILE to generate Levenshtein weights, "
+              "calling train_pmi.py on INFILE with '--generate pmi' to generate weights, "
               "then calling leven_align.py on INFILE with the generated "
               "weights, and finally applying a rightward merging of insertions "
               "on the best alignment to arrive at the character-level "
