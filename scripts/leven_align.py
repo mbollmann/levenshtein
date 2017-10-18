@@ -18,8 +18,8 @@ class MainApplication(object):
 
     def run(self):
         aligner = LevenshteinAligner(weights=self.weights)
+        plain_aligner = LevenshteinAligner()
         style = self.args.style
-        nonid = self.args.nonid
 
         for line in self.args.infile:
             try:
@@ -27,8 +27,17 @@ class MainApplication(object):
             except ValueError:
                 print >> sys.stderr, "*** Ignoring line: %s" % line
 
-            if not (nonid and word1 == word2):
-                aligner.print_alignments(word1, word2, style)
+            if self.args.nonid and word1 == word2:
+                continue
+            if self.args.unusual:
+                if word1 == word2:
+                    continue
+                _, rulesets_w = aligner.perform_levenshtein(word1, word2)
+                _, rulesets_p = plain_aligner.perform_levenshtein(word1, word2)
+                if set(rulesets_w).issubset(set(rulesets_p)):
+                    continue
+
+            aligner.print_alignments(word1, word2, style)
 
 if __name__ == '__main__':
     description = "Takes an XML file containing Levenshtein weights and prints character alignments for given word pairs."
@@ -59,6 +68,11 @@ if __name__ == '__main__':
                         action='store_true',
                         default=False,
                         help='Only print alignments for non-identical word pairs')
+    parser.add_argument('-u', '--unusual',
+                        dest="unusual",
+                        action='store_true',
+                        default=False,
+                        help='Only print alignments that would not be possible with plain Levenshtein alignment')
 
     args = parser.parse_args()
 

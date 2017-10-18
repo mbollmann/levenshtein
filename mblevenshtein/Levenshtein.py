@@ -18,6 +18,9 @@ class RuleSet(list):
         n.append(newitem)
         return n
 
+    def __hash__(self):
+        return super(RuleSet).__hash__()
+
 class LevenshteinAligner(object):
     weights = None
     epsilon = '<eps>'
